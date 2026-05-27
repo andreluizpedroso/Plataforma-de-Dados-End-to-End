@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: silver
+    schema: silver
+    tables:
+      - name: customers
+      - name: accounts
+      - name: assets
+      - name: orders
+      - name: trades
+      - name: cash_transactions

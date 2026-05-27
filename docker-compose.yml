@@ -1,0 +1,148 @@
+services:
+  postgres_oltp:
+    image: postgres:16
+    container_name: staff_postgres_oltp
+    environment:
+      POSTGRES_USER: ${POSTGRES_OLTP_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_OLTP_PASSWORD:-app_password}
+      POSTGRES_DB: ${POSTGRES_OLTP_DB:-app_db}
+    ports:
+      - "${POSTGRES_OLTP_PORT:-5432}:5432"
+    volumes:
+      - postgres_oltp_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data_platform
+
+  airflow_metadata:
+    image: postgres:16
+    container_name: staff_airflow_metadata
+    environment:
+      POSTGRES_USER: ${AIRFLOW_DB_USER:-airflow}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD:-airflow}
+      POSTGRES_DB: ${AIRFLOW_DB_NAME:-airflow}
+    volumes:
+      - airflow_metadata_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - data_platform
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    image: staff-airflow:local
+    container_name: staff_airflow_init
+    depends_on:
+      airflow_metadata:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow_metadata:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USER:-admin}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:-admin}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
+      - ./data:/opt/airflow/data
+      - ./warehouse:/opt/airflow/warehouse
+      - ./ingestion:/opt/airflow/ingestion
+    command: version
+    networks:
+      - data_platform
+
+  airflow-webserver:
+    image: staff-airflow:local
+    container_name: staff_airflow_webserver
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow_metadata:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      POSTGRES_HOST: postgres_oltp
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_OLTP_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_OLTP_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_OLTP_PASSWORD:-app_password}
+      DUCKDB_PATH: /opt/airflow/warehouse/investments.duckdb
+    ports:
+      - "${AIRFLOW_WEBSERVER_PORT:-8080}:8080"
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./warehouse:/opt/airflow/warehouse
+      - ./ingestion:/opt/airflow/ingestion
+      - ./dbt:/opt/airflow/dbt
+    command: webserver
+    networks:
+      - data_platform
+
+  airflow-scheduler:
+    image: staff-airflow:local
+    container_name: staff_airflow_scheduler
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER:-airflow}:${AIRFLOW_DB_PASSWORD:-airflow}@airflow_metadata:5432/${AIRFLOW_DB_NAME:-airflow}
+      AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      POSTGRES_HOST: postgres_oltp
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_OLTP_DB:-app_db}
+      POSTGRES_USER: ${POSTGRES_OLTP_USER:-app_user}
+      POSTGRES_PASSWORD: ${POSTGRES_OLTP_PASSWORD:-app_password}
+      DUCKDB_PATH: /opt/airflow/warehouse/investments.duckdb
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./warehouse:/opt/airflow/warehouse
+      - ./ingestion:/opt/airflow/ingestion
+      - ./dbt:/opt/airflow/dbt
+    command: scheduler
+    networks:
+      - data_platform
+
+  metabase:
+    image: metabase/metabase:v0.50.18
+    container_name: staff_metabase
+    ports:
+      - "${METABASE_PORT:-3000}:3000"
+    volumes:
+      - metabase_data:/metabase-data
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+    networks:
+      - data_platform
+
+networks:
+  data_platform:
+    name: staff_data_platform
+
+volumes:
+  postgres_oltp_data:
+  airflow_metadata_data:
+  metabase_data:

@@ -1,0 +1,66 @@
+version: 2
+
+models:
+  - name: dim_customers
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+      - name: email
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_accounts
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+
+  - name: dim_assets
+    columns:
+      - name: asset_id
+        tests:
+          - not_null
+          - unique
+      - name: ticker
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_trades
+    columns:
+      - name: trade_id
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        tests:
+          - not_null
+      - name: asset_id
+        tests:
+          - not_null
+
+  - name: fact_cash_transactions
+    columns:
+      - name: cash_transaction_id
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        tests:
+          - not_null
+
+  - name: mart_account_positions
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+      - name: asset_id
+        tests:
+          - not_null

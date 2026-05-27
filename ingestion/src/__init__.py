@@ -1,0 +1,1 @@
+"""Investment data ingestion package."""
