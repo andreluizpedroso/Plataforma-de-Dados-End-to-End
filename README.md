@@ -1,5 +1,12 @@
 # Modern Data Engineering Platform
 
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![dbt](https://img.shields.io/badge/dbt-FF694B?style=flat&logo=dbt&logoColor=white)
+![Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apache-airflow&logoColor=white)
+![DuckDB](https://img.shields.io/badge/DuckDB-FFF000?style=flat&logo=duckdb&logoColor=black)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![Metabase](https://img.shields.io/badge/Metabase-509EE3?style=flat&logo=metabase&logoColor=white)
+
 Projeto educacional para construir uma plataforma local de engenharia de dados ponta a ponta.
 
 ## Objetivo
@@ -14,6 +21,10 @@ Construir, entender e evoluir um pipeline com:
 - Airflow para orquestracao
 - Metabase para BI
 - Arquitetura Medallion: bronze, silver e gold
+
+## Por que esse projeto?
+
+Aprender engenharia de dados lendo tutoriais isolados deixa lacunas: você sabe usar cada ferramenta, mas não sabe como elas se encaixam num pipeline real. Este projeto monta o ambiente completo — ingestão, transformação, orquestração e BI — na sua máquina, sem custo de nuvem, para que você possa quebrar, consertar e entender cada camada com dados que você mesmo controla. É a diferença entre estudar uma peça do quebra-cabeça e ver a imagem toda montada.
 
 ## Arquitetura inicial
 
@@ -125,3 +136,10 @@ O Airflow possui a DAG `investments_batch_pipeline`, que executa:
 4. publica `main_gold.mart_account_positions` em `analytics.mart_account_positions` no PostgreSQL para o Metabase
 
 Runbook operacional: `docs/runbook.md`.
+
+## Próximos passos
+
+- **Qualidade de dados com Great Expectations**: adicionar contratos de dados entre as camadas bronze → silver → gold, com alertas quando expectativas forem violadas.
+- **CI/CD com GitHub Actions**: rodar `dbt test` e os testes Python automaticamente em cada pull request, impedindo que regressões cheguem à branch principal.
+- **Deploy em nuvem**: migrar o warehouse local para BigQuery ou Redshift e o storage de Parquet para S3/GCS, mantendo a mesma arquitetura Medallion com custo controlado.
+- **Streaming com Kafka**: introduzir um producer que publique eventos de trade em tempo real e um consumer que alimente a camada bronze, evoluindo o pipeline de batch para near-realtime.
