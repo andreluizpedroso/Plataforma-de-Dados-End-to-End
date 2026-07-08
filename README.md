@@ -1,5 +1,6 @@
 # Modern Data Engineering Platform
 
+![CI](https://github.com/andreluizpedroso/Plataforma-de-Dados-End-to-End/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
 ![dbt](https://img.shields.io/badge/dbt-FF694B?style=flat&logo=dbt&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-017CEE?style=flat&logo=apache-airflow&logoColor=white)
@@ -137,9 +138,19 @@ O Airflow possui a DAG `investments_batch_pipeline`, que executa:
 
 Runbook operacional: `docs/runbook.md`.
 
+## Testes e CI
+
+```bash
+pytest -q
+```
+
+15 testes cobrindo `ingestion/src/` (bronze, silver, warehouse, pipeline, publish, config, logging) — 99% de cobertura. A maioria roda contra arquivos Parquet e um DuckDB local reais (sem precisar do Postgres/Airflow no ar); as poucas partes que exigem Postgres (`bronze.extract_bronze`, `publish.publish_gold_to_postgres`) são testadas com mocks do `psycopg2`.
+
+CI (GitHub Actions) roda `pytest` com cobertura (mínimo 60%) e lint (`ruff`) em todo push/PR para `main`.
+
 ## Próximos passos
 
 - **Qualidade de dados com Great Expectations**: adicionar contratos de dados entre as camadas bronze → silver → gold, com alertas quando expectativas forem violadas.
-- **CI/CD com GitHub Actions**: rodar `dbt test` e os testes Python automaticamente em cada pull request, impedindo que regressões cheguem à branch principal.
+- **`dbt test` no CI**: hoje o CI roda os testes Python; falta incluir `dbt run` + `dbt test` no workflow (exige subir um Postgres de teste no runner).
 - **Deploy em nuvem**: migrar o warehouse local para BigQuery ou Redshift e o storage de Parquet para S3/GCS, mantendo a mesma arquitetura Medallion com custo controlado.
 - **Streaming com Kafka**: introduzir um producer que publique eventos de trade em tempo real e um consumer que alimente a camada bronze, evoluindo o pipeline de batch para near-realtime.
